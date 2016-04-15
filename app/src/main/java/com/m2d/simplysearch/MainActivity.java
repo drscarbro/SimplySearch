@@ -5,23 +5,25 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.m2d.simplysearch.model.Results;
+import com.m2d.simplysearch.parsers.JsonParser;
 
+import org.json.JSONObject;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     TextView output;
     ProgressBar pb;
     List<queryAsync> tasks;
+    List<Results> resultsList;
 
 
     /**
@@ -59,16 +62,15 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 if (isOnline()) {
-                    requestData();
+                    requestData("https://api.duckduckgo.com/?q=balls&format=json&pretty=1");
                 } else {
 
                 }
             }
 
-            private void requestData() {
+            private void requestData(String uri) {
                 queryAsync results = new queryAsync();
-                results.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "Anything", "Something",
-                        "Another Thing");
+                results.execute(uri);
             }
 
         });
@@ -78,8 +80,12 @@ public class MainActivity extends AppCompatActivity {
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
-    protected void updateDisplay(String result) {
-        output.append(result + "\n");
+    protected void updateDisplay() {
+        if (resultsList != null) {
+            for (Results results : resultsList) {
+                output.append(results.getFirstUrl() + "\n");
+            }
+        }
     }
 
     protected boolean isOnline(){
@@ -134,48 +140,43 @@ public class MainActivity extends AppCompatActivity {
         client.disconnect();
     }
 
-    private class queryAsync extends AsyncTask<String, String, String> {
+    private class queryAsync extends AsyncTask<URL, Void, JSONObject> {
+
+        @Override
+        protected JSONObject doInBackground(URL... params) {
+
+            HttpURLConnection connection = null;
+
+            try
+
+        }
 
         @Override
         protected void onPreExecute() {
-            updateDisplay("I'm Starting Something!");
+//            updateDisplay();
 
-            if(tasks.size() == 0){
+            if (tasks.size() == 0) {
                 pb.setVisibility(View.VISIBLE);
             }
             tasks.add(this);
         }
 
         @Override
-        protected String doInBackground(String... params) {
-
-            for (int i = 0; i < params.length; i++) {
-                publishProgress("Working with " + params[i]);
-
-
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            return "All done.";
-        }
-
-        @Override
         protected void onPostExecute(String results) {
-            updateDisplay(results);
 
+            resultsList = JsonParser.parseFeed(results);
+            updateDisplay();
 
             tasks.remove(this);
-            if(tasks.size() == 0){
+            if (tasks.size() == 0) {
                 pb.setVisibility(View.INVISIBLE);
             }
         }
+    }
 
         @Override
         protected void onProgressUpdate(String... values) {
-            updateDisplay(values[0]);
+//            updateDisplay(values[0]);
         }
 
     }
